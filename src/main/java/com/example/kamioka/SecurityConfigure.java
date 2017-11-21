@@ -1,6 +1,5 @@
 package com.example.kamioka;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AccountStatusUserDetailsChecker;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -8,10 +7,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.userdetails.AuthenticationUserDetailsService;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
-import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 
 @Configuration
 @EnableWebSecurity
@@ -22,13 +19,17 @@ public class SecurityConfigure extends WebSecurityConfigurerAdapter {
         System.out.println("-----------------------------------------");
         System.out.println("SecurityConfigure.configure(HttpSecurity)");
         System.out.println("-----------------------------------------");
+
         http.csrf().disable()
                 .authorizeRequests()
                 .mvcMatchers("/welcome").permitAll()
 //                .mvcMatchers("/api", "/api/**").permitAll()
                 .anyRequest().authenticated();
 
-        http.addFilter(tokenAuthenticatedProcessingFilter());
+        // HTTPヘッダのアクセストークンから認証情報を抽出するフィルター
+        AbstractPreAuthenticatedProcessingFilter preAuthFilter = new TokenAuthenticatedProcessingFilter();
+        preAuthFilter.setAuthenticationManager(authenticationManager());
+        http.addFilter(preAuthFilter);
     }
 
     @Override
@@ -36,33 +37,11 @@ public class SecurityConfigure extends WebSecurityConfigurerAdapter {
         System.out.println("---------------------------------------------------------");
         System.out.println("SecurityConfigure.configure(AuthenticationManagerBuilder)");
         System.out.println("---------------------------------------------------------");
-        auth.authenticationProvider(tokenAuthenticationProvider());
-    }
 
-    //@Bean
-    public AbstractPreAuthenticatedProcessingFilter tokenAuthenticatedProcessingFilter() throws Exception {
-        System.out.println("------------------------------------------------------");
-        System.out.println("SecurityConfigure.tokenAuthenticatedProcessingFilter()");
-        System.out.println("------------------------------------------------------");
-        TokenAuthenticatedProcessingFilter filter = new TokenAuthenticatedProcessingFilter();
-        filter.setAuthenticationManager(authenticationManager());
-        return filter;
-    }
-
-    //@Bean
-    public PreAuthenticatedAuthenticationProvider tokenAuthenticationProvider() {
         PreAuthenticatedAuthenticationProvider provider = new PreAuthenticatedAuthenticationProvider();
-        provider.setPreAuthenticatedUserDetailsService(tokenAuthenticationUserDetailsService());
+        provider.setPreAuthenticatedUserDetailsService(new TokenAuthenticationUserDetailsService());
         provider.setUserDetailsChecker(new AccountStatusUserDetailsChecker());
-        return provider;
-    }
 
-    //@Bean
-    public AuthenticationUserDetailsService<PreAuthenticatedAuthenticationToken> tokenAuthenticationUserDetailsService() {
-        System.out.println("---------------------------------------------------------");
-        System.out.println("SecurityConfigure.tokenAuthenticationUserDetailsService()");
-        System.out.println("---------------------------------------------------------");
-        return new TokenAuthenticationUserDetailsService();
+        auth.authenticationProvider(provider);
     }
-
 }
