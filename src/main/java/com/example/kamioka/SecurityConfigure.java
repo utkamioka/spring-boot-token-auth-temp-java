@@ -1,10 +1,14 @@
 package com.example.kamioka;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AccountStatusUserDetailsChecker;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
+import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
 
 @Configuration
 @EnableWebSecurity
@@ -15,10 +19,43 @@ public class SecurityConfigure extends WebSecurityConfigurerAdapter {
         System.out.println("-----------------------------------------");
         System.out.println("SecurityConfigure.configure(HttpSecurity)");
         System.out.println("-----------------------------------------");
+
         http.csrf().disable()
                 .authorizeRequests()
-                .mvcMatchers("/welcome").permitAll()
+                .mvcMatchers("/api/welcome").permitAll()
+                .mvcMatchers("/pages/hello").permitAll()
 //                .mvcMatchers("/api", "/api/**").permitAll()
-                .anyRequest().authenticated();
+                .anyRequest().authenticated()
+
+                .and()
+
+                .formLogin();
+
+        // HTTPヘッダのアクセストークンから認証情報を抽出するフィルター
+        AbstractPreAuthenticatedProcessingFilter preAuthFilter = new TokenAuthenticatedProcessingFilter();
+        preAuthFilter.setAuthenticationManager(authenticationManager());
+        http.addFilter(preAuthFilter);
+    }
+
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        System.out.println("---------------------------------------------------------");
+        System.out.println("SecurityConfigure.configure(AuthenticationManagerBuilder)");
+        System.out.println("---------------------------------------------------------");
+
+        auth.inMemoryAuthentication()
+                .withUser("admin").password("123").roles("admin")
+                .and()
+                .withUser("user1").password("123").roles("user")
+                .and()
+                .withUser("user2").password("123").roles("user")
+                .and()
+                .withUser("guest").password("123").roles("guest");
+
+        PreAuthenticatedAuthenticationProvider provider = new PreAuthenticatedAuthenticationProvider();
+        provider.setPreAuthenticatedUserDetailsService(new TokenAuthenticationUserDetailsService());
+        provider.setUserDetailsChecker(new AccountStatusUserDetailsChecker());
+
+        auth.authenticationProvider(provider);
     }
 }
