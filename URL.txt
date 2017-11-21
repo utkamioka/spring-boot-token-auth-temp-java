@@ -1,4 +1,4 @@
-http GET http://localhost:8080/welcome
-http GET http://localhost:8080/api/books
-http GET http://localhost:8080/api/books/1
-http GET http://localhost:8080/api/books/1 Authorization:admin
+http GET http://localhost:8080/api/welcome
+http GET http://localhost:8080/api/books Authorization:admin
+http GET http://localhost:8080/api/books/1 Authorization:user1
+w3m http://localhost:8080/pages/hello
